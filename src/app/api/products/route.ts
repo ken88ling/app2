@@ -1,36 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { productService } from '@/services/productService';
 
-// GET /api/products - Get all products
+// GET /api/products - Get all products, filter by category, or search
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const categoryId = searchParams.get('categoryId');
-    
-    const where = categoryId 
-      ? { 
-          categoryId,
-          isActive: true 
-        } 
-      : { 
-          isActive: true 
-        };
-    
-    const products = await prisma.product.findMany({
-      where,
-      include: {
-        category: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+    const { searchParams } = request.nextUrl;
+    const searchTerm = searchParams.get('search') || undefined;
+    const categoryId = searchParams.get('categoryId') || undefined;
+
+    let products;
+
+    if (searchTerm) {
+      // Assuming searchProducts will be updated to handle categoryId
+      products = await productService.searchProducts(searchTerm, categoryId);
+    } else if (categoryId) {
+      products = await productService.getProductsByCategory(categoryId);
+    } else {
+      // searchProducts without a term should return all active products
+      products = await productService.searchProducts();
+    }
     
     return NextResponse.json(products);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching products:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch products' },
+      { error: 'Failed to fetch products', details: error.message },
       { status: 500 }
     );
   }

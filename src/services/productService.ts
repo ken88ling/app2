@@ -103,4 +103,48 @@ export const productService = {
       throw error;
     }
   },
+
+  // Search products by name or description, optionally filtered by category
+  searchProducts: async (searchTerm?: string, categoryId?: string): Promise<Product[]> => {
+    try {
+      const whereClause: any = {
+        isActive: true,
+      };
+
+      if (categoryId && categoryId.trim() !== '') {
+        whereClause.categoryId = categoryId;
+      }
+
+      if (searchTerm && searchTerm.trim() !== '') {
+        whereClause.OR = [
+          {
+            name: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+          {
+            description: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        ];
+      }
+
+      const products = await prisma.product.findMany({
+        where: whereClause,
+        include: {
+          category: true,
+        },
+        orderBy: {
+          name: 'asc',
+        },
+      });
+      return products;
+    } catch (error) {
+      console.error('Error searching products:', error);
+      throw error;
+    }
+  },
 };
